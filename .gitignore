@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+*/node_modules
+
+# Environment
+.env
+*/**/.env
+
+# Build outputs
+/dist
+*/dist
+/build
+*/build
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+
+# Misc
+coverage/
+*.pem
+*.key
+*.crt

@@ -1,12 +1,20 @@
 {
   "name": "proctoring-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI Proctoring Application with React and Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "client": "cd frontend && npm run dev",
+    "server": "cd backend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "heroku-postbuild": "cd backend && npm install && cd ../frontend && npm install && npm run build"
   },
-  "keywords": [],
+  "keywords": ["proctoring", "ai", "react", "node", "express"],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0"
+  }
 }

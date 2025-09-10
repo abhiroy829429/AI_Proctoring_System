@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const connectDB = require('./config/db');
 const sessionRoutes = require('./routes/sessionRoutes');
 const eventRoutes = require('./routes/eventRoutes');
@@ -24,9 +25,20 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+// Serve static assets in production
+if (process.env.NODE_ENV === 'production') {
+  // Set static folder
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../frontend/dist', 'index.html'));
+  });
+}
+
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
 // Handle unhandled promise rejections
