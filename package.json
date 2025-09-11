@@ -9,7 +9,8 @@
     "server": "cd backend && npm run dev",
     "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
     "start": "node backend/index.js",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "render-build": "npm install && cd frontend && npm install && npm run build && cd ../backend && npm install"
   },
   "keywords": ["proctoring", "ai", "react", "node", "express"],
   "author": "",

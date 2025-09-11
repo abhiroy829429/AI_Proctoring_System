@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: proctoring-app
+    env: node
+    buildCommand: npm run render-build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        value: your_mongodb_connection_string  # Replace with your MongoDB connection string
+      - key: JWT_SECRET
+        generateValue: true
+    plan: free
