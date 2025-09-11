@@ -36,8 +36,9 @@ const EventSchema = new mongoose.Schema({
   },
   source: {
     type: String,
-    enum: ['system', 'face_detection', 'object_detection', 'user_action', 'api'],
-    default: 'system'
+    enum: ['system', 'face_detection', 'object_detection', 'user_action', 'api','frontend'],
+    default: 'system',
+    required: true
   },
   details: {
     type: mongoose.Schema.Types.Mixed,
