@@ -7,14 +7,17 @@
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "client": "cd frontend && npm run dev",
     "server": "cd backend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "start": "cd backend && npm start",
-    "heroku-postbuild": "cd backend && npm install && cd ../frontend && npm install && npm run build"
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
+    "start": "node backend/index.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
   },
   "keywords": ["proctoring", "ai", "react", "node", "express"],
   "author": "",
   "license": "ISC",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
   }
 }
