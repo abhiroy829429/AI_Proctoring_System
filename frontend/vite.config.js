@@ -38,7 +38,7 @@ export default defineConfig(({ command, mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
+            vendor: ['react', 'react-dom'],
             tensorflow: ['@tensorflow/tfjs', '@tensorflow-models/coco-ssd'],
             faceapi: ['face-api.js'],
           },
