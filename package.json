@@ -10,7 +10,11 @@
     "build": "cd frontend && npm install && npm install terser && npm run build && cd ../backend && npm install",
     "start": "node backend/index.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "render-build": "npm install && cd frontend && npm install && npm install terser && npm run build && cd ../backend && npm install"
+    "render-build": "npm install && cd frontend && npm install && npm install terser && npm run build && cd ../backend && npm install",
+    "generate-test-data": "node scripts/generate-test-data.js",
+    "db:backup": "node scripts/db-utils.js backup",
+    "db:restore": "node scripts/db-utils.js restore",
+    "db:list": "node scripts/db-utils.js list"
   },
   "keywords": ["proctoring", "ai", "react", "node", "express"],
   "author": "",

@@ -5,7 +5,16 @@ import { useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
 import './App.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+// Get API base URL from environment variables
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000') + '/api';
+
+// Log environment for debugging
+console.log('Environment:', {
+  NODE_ENV: import.meta.env.NODE_ENV,
+  VITE_NODE_ENV: import.meta.env.VITE_NODE_ENV,
+  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+  API_BASE
+});
 
 const STATUS = {
   IDLE: 'Idle',
@@ -197,12 +206,47 @@ export default function App() {
   };
 
   const logEvent = (event) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const newEvent = { id: Date.now(), timestamp, message: event };
-    setEvents(prev => [newEvent, ...prev].slice(0, 50));
-    
-    if (eventLogRef.current) {
-      eventLogRef.current.scrollTop = 0;
+    try {
+      // Handle both string and object events
+      const isObject = typeof event === 'object' && event !== null;
+      const timestamp = new Date();
+      
+      const newEvent = {
+        id: Date.now(),
+        timestamp: timestamp.toISOString(),
+        timeDisplay: timestamp.toLocaleTimeString(),
+        type: isObject ? event.type || 'info' : 'info',
+        message: isObject ? event.message || '' : event,
+        severity: isObject ? event.severity || 'info' : 'info',
+        ...(isObject ? { metadata: event.metadata || {} } : {})
+      };
+      
+      setEvents(prev => [newEvent, ...prev].slice(0, 100));
+      
+      // Auto-scroll the event log
+      if (eventLogRef.current) {
+        eventLogRef.current.scrollTop = 0;
+      }
+      
+      // Optionally send event to backend if session is active
+      if (sessionId && isObject && event.sendToServer !== false) {
+        // Don't await this to avoid blocking the UI
+        fetch(`${API_BASE}/events`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            type: newEvent.type,
+            details: newEvent.metadata,
+            timestamp: newEvent.timestamp,
+            severity: newEvent.severity
+          })
+        }).catch(err => {
+          console.error('Failed to log event to server:', err);
+        });
+      }
+    } catch (error) {
+      console.error('Error in logEvent:', error);
     }
   };
 
@@ -211,69 +255,133 @@ export default function App() {
       setStatusText('Starting session...');
       setStatusColor('blue');
       
-      const response = await fetch(`${API_BASE}/api/session/start`, {
+      console.log('Starting new proctoring session...');
+      const response = await fetch(`${API_BASE}/session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({ 
           candidateName: 'Test Candidate',
           examId: 'exam-123',
           metadata: {
             userAgent: navigator.userAgent,
-            screenResolution: `${window.screen.width}x${window.screen.height}`
+            screenResolution: `${window.screen.width}x${window.screen.height}`,
+            browser: {
+              name: navigator.appName,
+              version: navigator.appVersion,
+              platform: navigator.platform,
+              language: navigator.language
+            },
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            startTime: new Date().toISOString()
           }
         })
       });
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorMsg = data.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMsg);
       }
       
-      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to start session');
+      }
+      
+      console.log('Session started with ID:', data.sessionId);
       setSessionId(data.sessionId);
       setIsMonitoring(true);
       setStatusText(STATUS.MONITORING);
       setStatusColor('green');
-      logEvent('Session started successfully');
+      
+      // Log successful session start
+      logEvent({
+        type: 'session_start',
+        message: 'Proctoring session started',
+        metadata: {
+          sessionId: data.sessionId,
+          startTime: new Date().toISOString()
+        }
+      });
       
       // Start the detection loop
       startDetection();
       
     } catch (error) {
       console.error('Error starting session:', error);
+      const errorMessage = error.message || 'Failed to start session';
       setStatusText('Failed to start session');
       setStatusColor('red');
-      logEvent(`Error starting session: ${error.message}`);
+      logEvent({
+        type: 'error',
+        message: `Error starting session: ${errorMessage}`,
+        severity: 'error'
+      });
     }
   };
 
   const endSession = async () => {
     try {
+      if (!sessionId) {
+        console.warn('No active session to end');
+        return;
+      }
+      
       setStatusText('Ending session...');
       setStatusColor('blue');
       
-      if (sessionId) {
-        const response = await fetch(`${API_BASE}/api/session/end`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            sessionId,
-            endReason: 'user_ended',
-            metadata: {
-              status: statusText,
-              eventCount: events.length
-            }
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        logEvent('Session ended successfully');
+      console.log('Ending session:', sessionId);
+      const response = await fetch(`${API_BASE}/session/end`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          sessionId,
+          endReason: 'user_ended',
+          metadata: {
+            status: statusText,
+            eventCount: events.length,
+            endTime: new Date().toISOString(),
+            duration: Math.floor((new Date() - new Date(events[0]?.timestamp)) / 1000) || 0
+          }
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        const errorMsg = data.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMsg);
       }
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to end session properly');
+      }
+      
+      console.log('Session ended successfully:', sessionId);
+      logEvent({
+        type: 'session_end',
+        message: 'Proctoring session ended',
+        metadata: {
+          sessionId,
+          endTime: new Date().toISOString(),
+          status: 'completed',
+          eventCount: events.length
+        }
+      });
+      
     } catch (error) {
       console.error('Error ending session:', error);
-      logEvent(`Error ending session: ${error.message}`);
+      logEvent({
+        type: 'error',
+        message: `Error ending session: ${error.message}`,
+        severity: 'error'
+      });
     } finally {
       // Stop detection and cleanup
       stopDetection();
@@ -290,6 +398,11 @@ export default function App() {
       setIsMonitoring(false);
       setStatusText(STATUS.IDLE);
       setStatusColor('gray');
+      
+      // Clear events after a short delay
+      setTimeout(() => {
+        setEvents([]);
+      }, 2000);
     }
   };
 

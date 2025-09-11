@@ -4,76 +4,147 @@ const { v4: uuidv4 } = require('uuid');
 const Session = require('../models/Session');
 const Event = require('../models/Event');
 
+// Enable CORS for all routes in this router
+router.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
+
 // Start a new session
-router.post('/start', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const { candidateName } = req.body;
+    const { candidateName, examId, metadata } = req.body;
+    console.log('Starting session with data:', { candidateName, examId, metadata });
+    
     if (!candidateName) {
-      return res.status(400).json({ error: 'Candidate name is required' });
+      console.error('Missing candidate name');
+      return res.status(400).json({ 
+        success: false,
+        error: 'Candidate name is required' 
+      });
     }
 
     const sessionId = uuidv4();
     const session = new Session({
       sessionId,
       candidateName,
-      status: 'active'
+      examId: examId || 'default-exam',
+      status: 'active',
+      startTime: new Date(),
+      metadata: metadata || {}
     });
 
-    await session.save();
+    try {
+      await session.save();
+      console.log('Session created:', sessionId);
+    } catch (error) {
+      console.error('Error saving session:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to create session' 
+      });
+    }
 
     // Log session start event
-    await Event.create({
-      sessionId,
-      type: 'session_start',
-      details: { candidateName }
-    });
+    try {
+      await Event.create({
+        sessionId,
+        type: 'session_start',
+        details: { 
+          candidateName,
+          examId: examId || 'default-exam',
+          ...metadata
+        }
+      });
+      console.log('Session start event logged');
+    } catch (error) {
+      console.error('Error logging session start event:', error);
+      // Don't fail the request if event logging fails
+    }
 
-    res.status(201).json({ 
+    console.log('Session started successfully:', sessionId);
+    return res.status(201).json({ 
       success: true, 
       sessionId,
       message: 'Session started successfully' 
     });
   } catch (error) {
     console.error('Error starting session:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 // End a session
 router.post('/end', async (req, res) => {
   try {
-    const { sessionId } = req.body;
+    const { sessionId, endReason, metadata } = req.body;
+    console.log('Ending session with data:', { sessionId, endReason, metadata });
+    
     if (!sessionId) {
-      return res.status(400).json({ error: 'Session ID is required' });
+      console.error('Missing session ID');
+      return res.status(400).json({ 
+        success: false,
+        error: 'Session ID is required' 
+      });
     }
 
+    const updateData = {
+      status: 'completed',
+      endTime: new Date(),
+      'metadata.endReason': endReason || 'user_ended',
+      'metadata.endData': metadata || {}
+    };
+
     const session = await Session.findOneAndUpdate(
-      { sessionId, status: 'active' },
-      { 
-        status: 'ended',
-        endTime: new Date() 
-      },
-      { new: true }
+      { sessionId },
+      updateData,
+      { new: true, upsert: false }
     );
 
     if (!session) {
-      return res.status(404).json({ error: 'Active session not found' });
+      console.error('Session not found:', sessionId);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Session not found' 
+      });
     }
 
     // Log session end event
-    await Event.create({
-      sessionId,
-      type: 'session_end',
-      details: { duration: (new Date() - session.startTime) / 1000 }
-    });
+    try {
+      await Event.create({
+        sessionId,
+        type: 'session_end',
+        details: {
+          status: 'completed',
+          endReason: endReason || 'user_ended',
+          ...(metadata || {})
+        }
+      });
+      console.log('Session end event logged for session:', sessionId);
+    } catch (error) {
+      console.error('Error logging session end event:', error);
+      // Don't fail the request if event logging fails
+    }
 
+    console.log('Session ended successfully:', sessionId);
     res.json({ 
       success: true, 
-      message: 'Session ended successfully' 
+      message: 'Session ended successfully',
+      sessionId
     });
   } catch (error) {
     console.error('Error ending session:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
