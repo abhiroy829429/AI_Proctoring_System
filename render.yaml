@@ -2,7 +2,14 @@ services:
   - type: web
     name: proctoring-app
     env: node
-    buildCommand: npm run render-build
+    buildCommand: |
+      npm install
+      cd frontend
+      npm install
+      npm install terser
+      npm run build
+      cd ../backend
+      npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV

@@ -7,10 +7,10 @@
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "client": "cd frontend && npm run dev",
     "server": "cd backend && npm run dev",
-    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install",
+    "build": "cd frontend && npm install && npm install terser && npm run build && cd ../backend && npm install",
     "start": "node backend/index.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "render-build": "npm install && cd frontend && npm install && npm run build && cd ../backend && npm install"
+    "render-build": "npm install && cd frontend && npm install && npm install terser && npm run build && cd ../backend && npm install"
   },
   "keywords": ["proctoring", "ai", "react", "node", "express"],
   "author": "",

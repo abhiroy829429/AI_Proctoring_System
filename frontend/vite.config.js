@@ -27,8 +27,23 @@ export default defineConfig(({ command, mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: mode !== 'production',
-      minify: 'terser',
+      minify: mode === 'production' ? 'terser' : false,
+      terserOptions: {
+        compress: {
+          drop_console: mode === 'production',
+          drop_debugger: mode === 'production',
+        },
+      },
       chunkSizeWarningLimit: 1600,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            tensorflow: ['@tensorflow/tfjs', '@tensorflow-models/coco-ssd'],
+            faceapi: ['face-api.js'],
+          },
+        },
+      },
     },
   };
 });
