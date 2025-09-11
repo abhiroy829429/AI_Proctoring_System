@@ -6,7 +6,8 @@ import Webcam from 'react-webcam';
 import './App.css';
 
 // Get API base URL from environment variables
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000') + '/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+const API_PREFIX = '/api';
 
 // Log environment for debugging
 console.log('Environment:', {
@@ -231,7 +232,7 @@ export default function App() {
       // Optionally send event to backend if session is active
       if (sessionId && isObject && event.sendToServer !== false) {
         // Don't await this to avoid blocking the UI
-        fetch(`${API_BASE}/events`, {
+        fetch(`${API_BASE}${API_PREFIX}/events`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -256,7 +257,7 @@ export default function App() {
       setStatusColor('blue');
       
       console.log('Starting new proctoring session...');
-      const response = await fetch(`${API_BASE}/session`, {
+      const response = await fetch(`${API_BASE}${API_PREFIX}/session`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -334,7 +335,7 @@ export default function App() {
       setStatusColor('blue');
       
       console.log('Ending session:', sessionId);
-      const response = await fetch(`${API_BASE}/session/end`, {
+      const response = await fetch(`${API_BASE}${API_PREFIX}/session/end`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
